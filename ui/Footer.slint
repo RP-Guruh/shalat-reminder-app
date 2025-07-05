@@ -1,0 +1,38 @@
+import { HorizontalBox } from "std-widgets.slint";
+export component Footer  {
+    callback show-about();
+    callback show-credit();
+    HorizontalBox {
+        y: 30px;
+        Text {
+            text: "About";
+            color: #ffffff;
+            font-weight: 900;
+            font-size: 14px;
+            font-family: "Arial";
+            horizontal-alignment: center;
+            TouchArea {
+                clicked => {
+                    root.show-about();
+                }
+                mouse-cursor: pointer;
+            }
+        }
+
+        Text {
+            text: "Credit";
+            color: #ffffff;
+            font-weight: 900;
+            font-size: 14px;
+            font-family: "Arial";
+            horizontal-alignment: center;
+            TouchArea {
+                clicked => {
+                    root.show-credit();
+                }
+                mouse-cursor: pointer;
+            }
+
+        }
+    }
+}

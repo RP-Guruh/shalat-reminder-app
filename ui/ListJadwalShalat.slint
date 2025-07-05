@@ -1,0 +1,76 @@
+import { Button, VerticalBox } from "std-widgets.slint";
+
+
+
+export component ListJadwalShalat {
+
+    // props
+    in-out property <string> nama_shalat;
+    in-out property <string> waktu_shalat;
+    in-out property <bool> is_silent: true;
+    in-out property <bool> is_active: false;
+
+    HorizontalLayout {
+        spacing: 8px;
+        Rectangle {
+            width: parent.width;
+            height: 50px;
+            background: is-active ? @linear-gradient(90deg, rgba(79, 195, 247, 0.3), rgba(10, 10, 35, 0.3)) : rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+
+
+            Text {
+                text: nama_shalat;
+                color: #E0E0E0;
+                font-size: 16px;
+                font-family: "Poppins";
+                font-weight: 600;
+                x: 12px;
+                vertical-alignment: center;
+            }
+
+            Text {
+                text: waktu_shalat;
+                color: #4FC3F7;
+                font-size: 16px;
+                font-family: "Poppins";
+                font-weight: 500;
+                horizontal-alignment: right;
+                x: parent.width - self.width - 60px;
+                vertical-alignment: center;
+            }
+
+            Rectangle {
+                x: parent.width - 48px;
+                width: 36px;
+                height: 36px;
+                background: rgba(255, 255, 255, 0.2);
+                border-radius: 18px;
+                border-width: 1px;
+                border-color: is_silent ? #4FC3F7 : #808080;
+                y: (parent.height - self.height) / 2;
+
+                Text {
+                    Image {
+                        source: is_silent ? @image-url("../images/sound-off.png") : @image-url("../images/sound-on.png");
+                        width: 24px;
+                        height: 24px;
+                        x: (parent.width - self.width) / 2; 
+                        y: (parent.height - self.height) / 2; 
+                        image-fit: contain;
+                    }
+                    font-weight: 900;
+                    width: parent.width;
+                    height: parent.height;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+
+                TouchArea {
+                    clicked => {
+                    } // Memanggil callback
+                }
+            }
+        }
+    }
+}

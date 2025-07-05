@@ -1,0 +1,339 @@
+import { Button, VerticalBox, HorizontalBox, StandardButton } from "std-widgets.slint";
+import { ListJadwalShalat } from "./ListJadwalShalat.slint";
+import { Footer } from "./Footer.slint";
+
+export component AboutWindow inherits Window {
+    title: "About";
+    width: 360px;
+    height: 280px;
+    background: #0D1B2A; 
+
+    Rectangle {
+        width: parent.width;
+        height: parent.height;
+        background: #1B263B;
+        border-radius: 16px;
+        padding: 24px;
+
+        VerticalLayout {
+            spacing: 16px;
+            alignment: center;
+
+            Text {
+                text: "Shalat Reminder";
+                color: #F5F6F5;
+                font-size: 32px;
+                font-family: "Poppins";
+                font-weight: 700;
+                horizontal-alignment: center;
+            }
+
+            Text {
+                text: "This app helps you track daily prayer times accurately\nand effortlessly.\n\n Version: 1.0.0\n Developed by: grchmat";
+                color: #E0E0E0;
+                font-size: 14px;
+                font-family: "Poppins";
+                font-weight: 400;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+
+        }
+    }
+}
+
+export component CreditWindow inherits Window {
+    title: "Credits";
+    width: 420px;
+    height: 360px;
+    background: #0D1B2A;
+
+    Rectangle {
+        width: parent.width;
+        height: parent.height;
+        background: #1B263B;
+        border-radius: 16px;
+        padding: 24px;
+
+        VerticalLayout {
+            spacing: 20px;
+            alignment: center;
+
+            Text {
+                text: "Special Thanks To";
+                color: #F5F6F5;
+                font-size: 20px;
+                font-family: "Poppins";
+                font-weight: 700;
+                horizontal-alignment: center;
+            }
+
+            VerticalLayout {
+                spacing: 12px;
+                padding: 16px;
+
+                // Item 1
+                VerticalLayout {
+                    spacing: 2px;
+                    Text {
+                        text: "• Freepik";
+                        color: white;
+                        font-size: 15px;
+                        font-family: "Poppins";
+                        font-weight: 600;
+                    }
+                    Text {
+                        text: "https://www.freepik.com";
+                        color: #4FC3F7;
+                        font-size: 13px;
+                        font-family: "Poppins";
+                        font-italic: true;
+                    }
+                }
+
+                // Item 2
+                VerticalLayout {
+                    spacing: 2px;
+                    Text {
+                        text: "• Font Awesome";
+                        color: white;
+                        font-size: 15px;
+                        font-family: "Poppins";
+                        font-weight: 600;
+                    }
+                    Text {
+                        text: "https://fontawesome.com";
+                        color: #4FC3F7;
+                        font-size: 13px;
+                        font-family: "Poppins";
+                        font-italic: true;
+                    }
+                }
+
+                // Item 3
+                VerticalLayout {
+                    spacing: 2px;
+                    Text {
+                        text: "• Flaticon";
+                        color: white;
+                        font-size: 15px;
+                        font-family: "Poppins";
+                        font-weight: 600;
+                    }
+                    Text {
+                        text: "https://www.flaticon.com";
+                        color: #4FC3F7;
+                        font-size: 13px;
+                        font-family: "Poppins";
+                        font-italic: true;
+                    }
+                }
+
+                // Item 4
+                VerticalLayout {
+                    spacing: 2px;
+                    Text {
+                        text: "• Google Fonts";
+                        color: white;
+                        font-size: 15px;
+                        font-family: "Poppins";
+                        font-weight: 600;
+                    }
+                    Text {
+                        text: "https://fonts.google.com";
+                        color: #4FC3F7;
+                        font-size: 13px;
+                        font-family: "Poppins";
+                        font-italic: true;
+                    }
+                }
+            }
+
+        }
+    }
+}
+
+
+
+export component AppWindow inherits Window {
+    
+    
+    // application title
+    title: "Shalat Reminder";
+
+    // widht and height of the window
+    width: 400px;
+    height: 660px;
+    in-out property <int> counter: 42;
+    in-out property <bool> blink-active: true;
+    callback request-increase-value();
+    callback show-about();
+    callback show-credit();
+
+
+    // main layout of the application
+    VerticalLayout {
+        
+        spacing: 0px;
+
+        // header section
+        Rectangle {
+            width: 100%;
+            height: 280px;
+            background: @linear-gradient(180deg, #000033 0%, transparent 80%);
+
+            // background image with overlay
+            // using a mosque image with a dark overlay for better readability
+            // Adjusted opacity for a more subtle effect
+            // and a more balanced text layout
+            // The image is set to cover the entire header area
+            // with a dark overlay for better readability
+            // The text is centered and spaced for better visibility
+            // The text colors are chosen for contrast against the background
+            // The date and time are displayed in a clear, readable format   
+
+            // komentar di atas gua generate pake AI bingung abisnya   
+            Image {
+                source: @image-url("../images/mosque.jpg");
+                width: parent.width;
+                height: parent.height;
+                image-fit: cover;
+                opacity: 0.85;
+
+                Rectangle {
+                    width: parent.width;
+                    height: parent.height;
+                    background: @linear-gradient(180deg, rgba(0, 0, 51, 0.5) 0%, rgba(0, 0, 51, 0.2) 100%);
+                }
+
+                Text {
+                    text: "Waktu Shalat";
+                    color: #F5F6F5;
+                    font-size: 28px;
+                    font-family: "Poppins";
+                    font-weight: 700;
+                    horizontal-alignment: center;
+                    y: 20px;
+                }
+
+                Text {
+                    text: "Jakarta, Indonesia";
+                    color: #E0E0E0;
+                    font-size: 16px;
+                    font-family: "Poppins";
+                    font-weight: 500;
+                    horizontal-alignment: center;
+                    y: 60px;
+                }
+
+                Text {
+                    text: "Isya 19:00";
+                    color: #ffffff;
+                    font-size: 48px;
+                    font-family: "Arial";
+                    font-weight: 800;
+                    letter-spacing: 1.5px;
+                    horizontal-alignment: center;
+                    opacity: root.blink-active ? 0.5 + 0.5 * (1.0 + sin(animation-tick() / 1000ms * 360deg)) : 1.0;
+                }
+
+                Text {
+                    text: "Hari ini";
+                    font-size: 13px;
+                    color: white;
+                    font-weight: 700;
+                    x: 12px;
+                    y: parent.height - 60px;
+                }
+
+                Text {
+                    text: "Jumat, 5 Juli 2025 / 28 Dzulhijjah 1446 H";
+                    font-size: 13px;
+                    color: white;
+                    font-weight: 700;
+                    font-italic: true;
+                    x: 12px;
+                    y: parent.height - 44px;
+                }
+
+                Rectangle {
+                    x: parent.width - 60px;
+                    y: 20px;
+                    width: 40px;
+                    height: 40px;
+                    background: rgba(255, 255, 255, 0.2);
+                    border-radius: 20px;
+                    border-width: 1px;
+                    border-color: #4FC3F7;
+
+                    Text {
+                        text: "🌍"; 
+                        color: #4FC3F7;
+                        width: parent.width;
+                        height: parent.height;
+                        y: 3.5px;
+                        font-size: 24px;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+
+                    TouchArea {
+                        clicked => {
+                             root.show-about();
+                        }
+                    }
+                }
+            }
+        }
+
+        // SECTION: Main Content
+        Rectangle {
+            background: #0A0A23;
+            width: 100%;
+            height: 100%;
+            VerticalLayout {
+                padding: 16px;
+                spacing: 8px;
+                ListJadwalShalat {
+                    nama_shalat: "Subuh";
+                    waktu_shalat: "04:30";
+                    is_silent: false;
+                }
+
+                ListJadwalShalat {
+                    nama_shalat: "Dzuhur";
+                    waktu_shalat: "11:30";
+                    is_silent: true;
+                }
+
+                ListJadwalShalat {
+                    nama_shalat: "Ashar";
+                    waktu_shalat: "15:30";
+                    is_silent: false;
+                }
+
+                ListJadwalShalat {
+                    nama_shalat: "Maghrib";
+                    waktu_shalat: "18:00";
+                }
+
+                ListJadwalShalat {
+                    nama_shalat: "Isya";
+                    waktu_shalat: "19:00";
+                    is_active: true;
+                }
+
+                Footer { 
+                    show-about => {
+                        root.show-about();
+                    }
+                    show-credit => {
+                        root.show-credit();
+                    }
+                }
+            }
+        }
+    }
+}
+
+
