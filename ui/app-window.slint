@@ -1,7 +1,8 @@
-import { Button, VerticalBox, HorizontalBox, StandardButton } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, StandardButton, StandardListView, TextEdit } from "std-widgets.slint";
 import { ListJadwalShalat } from "./ListJadwalShalat.slint";
 import { Footer } from "./Footer.slint";
 
+// window : About
 export component AboutWindow inherits Window {
     title: "About";
     width: 360px;
@@ -42,6 +43,7 @@ export component AboutWindow inherits Window {
     }
 }
 
+// window : Credit
 export component CreditWindow inherits Window {
     title: "Credits";
     width: 420px;
@@ -153,8 +155,40 @@ export component CreditWindow inherits Window {
     }
 }
 
+// window : Select Location
+export component SelectLocationWindow inherits Window {
+    title: "Select Location";
+    width: 320px;
+    height: 300px;
+    VerticalLayout {
+        spacing: 16px;
+        padding: 16px;
+        Rectangle {
+            width: parent.width;
+            height: 60px;
+            clip: true;
+            Text {
+                text: "Select your location";
+                color: #F5F6F5;
+                font-size: 20px;
+                font-family: "Poppins";
+                font-weight: 700;
+                horizontal-alignment: center;
+                y: 10px;
+            }
+        }
+        
+        TextEdit {
+            placeholder-text: "Search your location";
+            height: 35px;
+            
+        }
 
+       
+    }
+}
 
+// window : Main App
 export component AppWindow inherits Window {
     
     
@@ -169,6 +203,7 @@ export component AppWindow inherits Window {
     callback request-increase-value();
     callback show-about();
     callback show-credit();
+    callback show-select-location();
 
 
     // main layout of the application
@@ -279,7 +314,7 @@ export component AppWindow inherits Window {
 
                     TouchArea {
                         clicked => {
-                             root.show-about();
+                             root.show-select-location();
                         }
                     }
                 }

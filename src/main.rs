@@ -7,7 +7,8 @@ slint::include_modules!();
 
 fn main() -> Result<(), Box<dyn Error>> {
     let ui = AppWindow::new()?;
-  
+    
+    // main window
     ui.on_request_increase_value({
         let ui_handle = ui.as_weak();
         move || {
@@ -16,14 +17,22 @@ fn main() -> Result<(), Box<dyn Error>> {
         }
     });
 
+    // about window
     ui.on_show_about(|| {
         let dialog = AboutWindow::new().unwrap();
         dialog.show().unwrap();
     });
 
+    // credit window
     ui.on_show_credit(|| {
         let dialog = CreditWindow::new().unwrap();
         dialog.show().unwrap();
+    });
+
+    // select location window
+    ui.on_show_select_location(|| {
+        let window  = SelectLocationWindow::new().unwrap();
+        window.show().unwrap();
     });
 
     ui.run()?;
