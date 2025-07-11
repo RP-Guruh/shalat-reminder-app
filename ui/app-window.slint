@@ -1,4 +1,4 @@
-import { Button, VerticalBox, HorizontalBox, StandardButton, StandardListView, TextEdit } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, StandardButton, ListView, TextEdit } from "std-widgets.slint";
 import { ListJadwalShalat } from "./ListJadwalShalat.slint";
 import { Footer } from "./Footer.slint";
 
@@ -158,35 +158,105 @@ export component CreditWindow inherits Window {
 // window : Select Location
 export component SelectLocationWindow inherits Window {
     title: "Select Location";
-    width: 320px;
-    height: 300px;
+    width: 350px;
+    height: 450px;
+
+    in-out property <string> search_text;
+    in-out property <[string]> city_list;
+    out property <int> selected_city;
+    callback search_text_changed(string);
+    callback selected_city_changed(int);
+
     VerticalLayout {
         spacing: 16px;
-        padding: 16px;
-        Rectangle {
+        padding: 8px;
+
+        // Header di tengah, tidak terlalu lebar
+        HorizontalLayout {
             width: parent.width;
-            height: 60px;
-            clip: true;
-            Text {
-                text: "Select your location";
-                color: #F5F6F5;
-                font-size: 20px;
-                font-family: "Poppins";
-                font-weight: 700;
-                horizontal-alignment: center;
-                y: 10px;
+            alignment: center;
+
+            Rectangle {
+                width: 100%;
+                max-width: 280px;
+                height: 60px;
+
+                Text {
+                    text: "Location for Prayer Times";
+                    width: parent.width;
+                    height: parent.height;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                    font-family: "Poppins";
+                    font-size: 18px;
+                    font-weight: 700;
+                    color: white;
+                }
+                
+            }
+        }
+
+        // Input (biarkan tampilannya default)
+        TextEdit {
+            placeholder-text: "Type your city";
+            height: 40px;
+            text: root.search_text;
+            edited(text) => {
+                root.search_text = text;
+                root.search_text_changed(text);
+            }
+        }
+
+        // List of city
+        ListView {
+            height: 200px;
+        
+            for data[i] in city_list : VerticalLayout {
+                spacing: 8px;
+        
+                Rectangle {
+                    height: 40px;
+                    width: parent.width;
+                    background: root.selected_city == i ? #dbeafe : #f9fafb;
+                    border-radius: 6px;
+                
+                    Text {
+                        text: data;
+                        font-weight: 600;
+                        font-size: 10px;
+                        color: #1f2937;
+                        vertical-alignment: center;
+                        horizontal-alignment: center;
+                        width: parent.width;
+                        height: parent.height;
+                    }
+                
+                    TouchArea {
+                        clicked => {
+                            root.selected_city = i;
+                            root.selected_city_changed(i);
+                            root.search_text = "TEST";
+                            debug(root.search_text);
+                        }
+                    }
+                }
+                
             }
         }
         
-        TextEdit {
-            placeholder-text: "Search your location";
-            height: 35px;
-            
+        Text {
+            text: "Your selected : "+ root.search_text;
         }
 
-       
+        // Save Button (gaya default, atau kamu bisa minta diperindah nanti)
+        Button {
+            text: "Save Location";
+            height: 40px;
+        }
     }
 }
+
+
 
 // window : Main App
 export component AppWindow inherits Window {
@@ -204,7 +274,7 @@ export component AppWindow inherits Window {
     callback show-about();
     callback show-credit();
     callback show-select-location();
-
+    
 
     // main layout of the application
     VerticalLayout {
