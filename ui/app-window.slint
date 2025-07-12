@@ -160,13 +160,16 @@ export component SelectLocationWindow inherits Window {
     title: "Select Location";
     width: 350px;
     height: 450px;
+    background: #ffffff;
 
     in-out property <string> search_text;
     in-out property <[string]> city_list;
     out property <int> selected_city;
     callback search_text_changed(string);
     callback selected_city_changed(int);
-
+    callback save_location(string);
+    callback close_window();
+    
     VerticalLayout {
         spacing: 16px;
         padding: 8px;
@@ -190,7 +193,7 @@ export component SelectLocationWindow inherits Window {
                     font-family: "Poppins";
                     font-size: 18px;
                     font-weight: 700;
-                    color: white;
+                    color: #0D1B2A;
                 }
                 
             }
@@ -235,8 +238,7 @@ export component SelectLocationWindow inherits Window {
                         clicked => {
                             root.selected_city = i;
                             root.selected_city_changed(i);
-                            root.search_text = "TEST";
-                            debug(root.search_text);
+                            root.search_text = data;
                         }
                     }
                 }
@@ -252,6 +254,33 @@ export component SelectLocationWindow inherits Window {
         Button {
             text: "Save Location";
             height: 40px;
+            clicked => {
+                root.save_location(root.search_text);
+            }
+        }
+    }
+}
+
+
+export component MessageWindow inherits Dialog {
+    title: "Message";
+    width: 300px;
+    height: 200px;
+    background: #ffffff;
+
+    in property <string> message_text;
+    callback close_window();
+
+    VerticalLayout {
+        spacing: 16px;
+        padding: 16px;
+
+        Text {
+            text: root.message_text;
+            font-size: 14px;
+            color: #333333;
+            horizontal-alignment: center;
+            vertical-alignment: center;
         }
     }
 }
@@ -270,11 +299,11 @@ export component AppWindow inherits Window {
     height: 660px;
     in-out property <int> counter: 42;
     in-out property <bool> blink-active: true;
+    in-out property <string> location: "Not Selected";
     callback request-increase-value();
     callback show-about();
     callback show-credit();
     callback show-select-location();
-    
 
     // main layout of the application
     VerticalLayout {
@@ -322,7 +351,7 @@ export component AppWindow inherits Window {
                 }
 
                 Text {
-                    text: "Jakarta, Indonesia";
+                    text: root.location;
                     color: #E0E0E0;
                     font-size: 16px;
                     font-family: "Poppins";
