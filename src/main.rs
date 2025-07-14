@@ -5,9 +5,13 @@ use std::{error::Error, io::Write, fs::File, io::Result};
 use serde::Deserialize;
 use slint::{ModelRc, SharedString, VecModel};
 use std::rc::Rc;
+
 use std::io::{BufRead, BufReader};
 use std::collections::HashMap;
-
+use tokio::runtime::Runtime;
+use reqwest;
+use chrono::{Datelike, Local};
+slint::include_modules!();
 
 // use std::{fs::File, io::BufReader};
 // use slint::{ModelRc, VecModel, SharedString};
@@ -22,14 +26,20 @@ struct Lokasi {
     gmt: String,
 }
 
+#[derive(Debug, Deserialize, Clone)]
+struct WaktuAdzan {
+    shubuh: String,
+    dzuhur: String,
+    ashar: String,
+    maghrib: String,
+    isya: String,
+}
+
 #[derive(Debug, Deserialize)]
 #[derive(Clone)]
 struct LokasiWrapper {
     data: Vec<Lokasi>,
 }
-
-
-slint::include_modules!();
 
 fn search_city(locations: &[Lokasi], query: &str) -> Vec<Lokasi> {
     locations
@@ -46,6 +56,15 @@ fn save_settings_to_ini(path: &str, city_id: u32, city_name: &str, city_gmt: &st
     writeln!(file, "id = {}", city_id)?;
     writeln!(file, "name = {}", city_name)?;
     writeln!(file, "gmt = {}", city_gmt)?;
+
+
+    writeln!(file, "\n[adzan]")?;
+    writeln!(file, "shubuh = {}", city_id)?;
+    writeln!(file, "dzuhur = {}", city_name)?;
+    writeln!(file, "ashar = {}", city_gmt)?;
+    writeln!(file, "maghrib = {}", city_gmt)?;
+    writeln!(file, "isya = {}", city_gmt)?;
+
     Ok(())
 }
 
@@ -82,11 +101,18 @@ fn read_location_settings(path: &str) -> std::io::Result<HashMap<String, String>
     Ok(settings)
 }
 
-
+async fn get_waktu_adzan(day: &str, month: &str, year: &str) -> std::result::Result<String, Box<dyn Error>> {
+    let url = format!("https://adzan-indonesia-api.vercel.app/adzan?cityId=67&month={}&year={}&date={}", month, year, day);
+    let res = reqwest::get(url).await?;
+    let text = res.text().await?;
+    Ok(text)
+}
 
 fn main() -> std::result::Result<(), Box<dyn Error>> {
     let ui = AppWindow::new()?;
+    // get waktu adzan
 
+    
     match read_location_settings("data/settings.ini") {
         Ok(settings) => {
             println!("ID: {}", settings.get("id").unwrap_or(&"0".to_string()));
@@ -164,6 +190,18 @@ fn main() -> std::result::Result<(), Box<dyn Error>> {
 
                 show_message("Setting successfully saved!");
 
+                let now = Local::now();
+                let day = &now.day().to_string();
+                let month = &now.month().to_string();
+                let year = &now.year().to_string();
+                let rt = Runtime::new().expect("Failed to create runtime");
+                rt.block_on(async {
+                    match get_waktu_adzan(day, month, year).await {
+                        Ok(text) => println!("Response:\n{}", text),
+                        Err(e) => eprintln!("Gagal: {}", e),
+                    }
+                });
+
                 if let Some(ui) = ui_weak.upgrade() {
                     ui.set_location(SharedString::from(format!("{}-{}", city_name, city_gmt)));
                 }
@@ -173,10 +211,7 @@ fn main() -> std::result::Result<(), Box<dyn Error>> {
         dialog.show().unwrap();
     }
 });
-
-
-
     ui.run()?;
-
     Ok(())
 }
+
