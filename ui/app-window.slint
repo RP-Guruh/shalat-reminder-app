@@ -300,6 +300,15 @@ export component AppWindow inherits Window {
     in-out property <int> counter: 42;
     in-out property <bool> blink-active: true;
     in-out property <string> location: "Not Selected";
+    
+    in-out property <string> tanggal_hari_ini;
+    in-out property <string> jam_saat_ini;
+    in-out property <string> adzan_shubuh;
+    in-out property <string> adzan_dzuhur;
+    in-out property <string> adzan_ashar;
+    in-out property <string> adzan_maghrib;
+    in-out property <string> adzan_isya;
+
     callback request-increase-value();
     callback show-about();
     callback show-credit();
@@ -361,7 +370,6 @@ export component AppWindow inherits Window {
                 }
 
                 Text {
-                    text: "Isya 19:00";
                     color: #ffffff;
                     font-size: 48px;
                     font-family: "Arial";
@@ -369,6 +377,8 @@ export component AppWindow inherits Window {
                     letter-spacing: 1.5px;
                     horizontal-alignment: center;
                     opacity: root.blink-active ? 0.5 + 0.5 * (1.0 + sin(animation-tick() / 1000ms * 360deg)) : 1.0;
+                    
+                    text: root.jam_saat_ini;
                 }
 
                 Text {
@@ -381,7 +391,7 @@ export component AppWindow inherits Window {
                 }
 
                 Text {
-                    text: "Jumat, 5 Juli 2025 / 28 Dzulhijjah 1446 H";
+                    text: root.tanggal_hari_ini;
                     font-size: 13px;
                     color: white;
                     font-weight: 700;
@@ -429,31 +439,31 @@ export component AppWindow inherits Window {
                 padding: 16px;
                 spacing: 8px;
                 ListJadwalShalat {
-                    nama_shalat: "Subuh";
-                    waktu_shalat: "04:30";
+                    nama_shalat: "Shubuh";
+                    waktu_shalat: root.adzan_shubuh;
                     is_silent: false;
                 }
 
                 ListJadwalShalat {
                     nama_shalat: "Dzuhur";
-                    waktu_shalat: "11:30";
+                    waktu_shalat: root.adzan_dzuhur;
                     is_silent: true;
                 }
 
                 ListJadwalShalat {
                     nama_shalat: "Ashar";
-                    waktu_shalat: "15:30";
+                    waktu_shalat: root.adzan_ashar;
                     is_silent: false;
                 }
 
                 ListJadwalShalat {
                     nama_shalat: "Maghrib";
-                    waktu_shalat: "18:00";
+                    waktu_shalat: root.adzan_maghrib;
                 }
 
                 ListJadwalShalat {
                     nama_shalat: "Isya";
-                    waktu_shalat: "19:00";
+                    waktu_shalat: root.adzan_isya;
                     is_active: true;
                 }
 
