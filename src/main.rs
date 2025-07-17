@@ -1,7 +1,7 @@
 // Prevent console window in addition to Slint window in Windows release builds when, e.g., starting the app via file manager. Ignored on other platforms.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::{error::Error, io::Write, fs::File, io::Result, thread, time::Duration};
+use std::{error::Error, io::Write, fs::File, io::Result, time::Duration, thread};
 use serde::Deserialize;
 
 use slint::{ModelRc, SharedString, VecModel, Timer};
@@ -10,9 +10,10 @@ use std::io::{BufRead, BufReader};
 use std::collections::HashMap;
 use tokio::runtime::Runtime;
 use reqwest;
-use chrono::{Datelike, Local, Timelike};
+use chrono::{Datelike, Local, Timelike, NaiveTime};
 use misykat::hijri::HijriDate;
 use misykat::jiff;
+use rodio::{OutputStreamBuilder};
 
 
 slint::include_modules!();
@@ -45,6 +46,12 @@ struct LokasiWrapper {
     data: Vec<Lokasi>,
 }
 
+#[derive(Debug)]
+struct JadwalShalat {
+    nama: &'static str,
+    waktu: String,
+}   
+
 fn search_city(locations: &[Lokasi], query: &str) -> Vec<Lokasi> {
     locations
         .iter()
@@ -52,7 +59,6 @@ fn search_city(locations: &[Lokasi], query: &str) -> Vec<Lokasi> {
         .cloned()
         .collect()
 }
-
 
 fn save_settings_to_ini(path: &str, city_id: u32, city_name: &str, city_gmt: &str, jadwal_adzan: &WaktuAdzan) -> Result<()> {
     let mut file = File::create(path)?;
@@ -145,17 +151,92 @@ async fn get_waktu_adzan(
 }
 
 
-fn main() -> std::result::Result<(), Box<dyn Error>> {
-    let ui = AppWindow::new()?;
+fn play_adzan(nama: &str) -> std::result::Result<(), Box<dyn Error>> {
+    // Pindahkan semua ke dalam thread baru
+    let nama = nama.to_string();
+    thread::spawn(move || {
+        let stream_handle = OutputStreamBuilder::open_default_stream().unwrap();
+        let mixer = stream_handle.mixer();
 
+        let file_path = if nama == "Subuh" {
+            "audio/shubuh.mp3"
+        } else {
+            "audio/adzan.mp3"
+        };
+
+        let file = File::open(file_path).unwrap();
+        let sink = rodio::play(mixer, BufReader::new(file)).unwrap();
+        sink.set_volume(0.2);
+
+        println!("Adzan '{}' dimulai", nama);
+
+        thread::sleep(Duration::from_secs(240));
+        drop(sink); 
+    });
+
+    Ok(())
+}
+fn main() -> std::result::Result<(), Box<dyn Error>> {
+
+    let ui = AppWindow::new()?;
     let weak_ui = ui.as_weak();
 
     let timer = Timer::default();
+    let mut last_adzan_played = String::new();
     timer.start(slint::TimerMode::Repeated, std::time::Duration::from_secs(1), move || {
         if let Some(ui) = weak_ui.upgrade() {
             let now = Local::now();
             let jam = format!("{:02}:{:02}:{:02}", now.hour(), now.minute(), now.second());
             ui.set_jam_saat_ini(SharedString::from(jam));
+            
+            let list_waktu_shalat = match read_location_settings("data/settings.ini") {
+                Ok(settings) => {
+                    vec![
+                        JadwalShalat { nama: "Subuh", waktu: settings.get("shubuh").cloned().unwrap_or_default() },
+                        JadwalShalat { nama: "Dzuhur", waktu: settings.get("dzuhur").cloned().unwrap_or_default() },
+                        JadwalShalat { nama: "Ashar", waktu: settings.get("ashar").cloned().unwrap_or_default() },
+                        JadwalShalat { nama: "Maghrib", waktu: settings.get("maghrib").cloned().unwrap_or_default() },
+                        JadwalShalat { nama: "Isya", waktu: settings.get("isya").cloned().unwrap_or_default() },
+                    ]
+                }
+                Err(e) => {
+                    eprintln!("Gagal membaca settings: {}", e);
+                    vec![
+                        JadwalShalat { nama: "Shubuh", waktu: String::new() },
+                        JadwalShalat { nama: "Dzuhur", waktu: String::new() },
+                        JadwalShalat { nama: "Ashar", waktu: String::new() },
+                        JadwalShalat { nama: "Maghrib", waktu: String::new() },
+                        JadwalShalat { nama: "Isya", waktu: String::new() },
+                    ]
+                }
+            };
+            
+            
+            let mut index_selanjutnya = 0;
+            for (i, j) in list_waktu_shalat.iter().enumerate() {
+                if let Ok(waktu) = NaiveTime::parse_from_str(&j.waktu, "%H:%M") {
+                    if waktu > now.time() {
+                        index_selanjutnya = i;
+                        break;
+                    }
+                }
+            }
+            if let Some(jadwal) = list_waktu_shalat.get(index_selanjutnya) {
+                ui.set_next_shalat(SharedString::from(jadwal.nama));
+            }
+            for j in &list_waktu_shalat {
+                if let Ok(waktu) = NaiveTime::parse_from_str(&j.waktu, "%H:%M") {
+                    if waktu.hour() == now.hour() && waktu.minute() == now.minute() && last_adzan_played != j.nama {
+                        if let Err(e) = play_adzan(j.nama) {
+                            eprintln!("Failed to play adzan: {}", e);
+                        }
+                        last_adzan_played = j.nama.to_string();
+                    }
+                }
+            }
+
+       
+          
         }
     });
 
@@ -167,12 +248,9 @@ fn main() -> std::result::Result<(), Box<dyn Error>> {
     let date = jiff::civil::date(year, month, day);
 
     let hijr_date = HijriDate::from_gregorian(date, 0);
-    
 
     let formatted = format!("{} {} {} H - {} {} {}", hijr_date.day, hijr_date.month_english, hijr_date.year, day, month_name, year);
     ui.set_tanggal_hari_ini(SharedString::from(formatted));
-
-
 
     match read_location_settings("data/settings.ini") {
         Ok(settings) => {
@@ -194,15 +272,7 @@ fn main() -> std::result::Result<(), Box<dyn Error>> {
             eprintln!("Gagal membaca settings: {}", e);
         }
     }
-    // main window
-    ui.on_request_increase_value({
-        let ui_handle = ui.as_weak();
-        move || {
-            let ui = ui_handle.unwrap();
-            ui.set_counter(ui.get_counter() + 1);
-        }
-    });
-
+  
     // about window
     ui.on_show_about(|| {
         let dialog = AboutWindow::new().unwrap();
@@ -217,8 +287,8 @@ fn main() -> std::result::Result<(), Box<dyn Error>> {
 
     // select location window
     ui.on_show_select_location({
-    let ui_weak = ui.as_weak(); 
-    move || {
+        let ui_weak = ui.as_weak(); 
+        move || {
         let dialog = SelectLocationWindow::new().unwrap();
         let dialog_weak = dialog.as_weak();
 
@@ -276,12 +346,9 @@ fn main() -> std::result::Result<(), Box<dyn Error>> {
 
             }
         });
-
-        dialog.show().unwrap();
-        
+        dialog.show().unwrap();  
     }
-    
-});
+    });
     ui.run()?;
     Ok(())
 }

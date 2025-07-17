@@ -289,16 +289,18 @@ export component MessageWindow inherits Dialog {
 
 // window : Main App
 export component AppWindow inherits Window {
-    
-    
     // application title
-    title: "Shalat Reminder";
+    title: "Jadwal Shalat";
+    // application icon
+    icon: @image-url("../images/logo.png");
+
 
     // widht and height of the window
     width: 400px;
     height: 660px;
     in-out property <int> counter: 42;
     in-out property <bool> blink-active: true;
+    in-out property <string> next_shalat;
     in-out property <string> location: "Not Selected";
     
     in-out property <string> tanggal_hari_ini;
@@ -442,29 +444,33 @@ export component AppWindow inherits Window {
                     nama_shalat: "Shubuh";
                     waktu_shalat: root.adzan_shubuh;
                     is_silent: false;
+                    is_active: root.next_shalat == "Shubuh"? true : false;
                 }
 
                 ListJadwalShalat {
                     nama_shalat: "Dzuhur";
                     waktu_shalat: root.adzan_dzuhur;
                     is_silent: true;
+                    is_active: root.next_shalat == "Dzuhur"? true : false;
                 }
 
                 ListJadwalShalat {
                     nama_shalat: "Ashar";
                     waktu_shalat: root.adzan_ashar;
                     is_silent: false;
+                    is_active: root.next_shalat == "Ashar"? true : false;
                 }
 
                 ListJadwalShalat {
                     nama_shalat: "Maghrib";
                     waktu_shalat: root.adzan_maghrib;
+                    is_active: root.next_shalat == "Maghrib"? true : false;
                 }
 
                 ListJadwalShalat {
                     nama_shalat: "Isya";
                     waktu_shalat: root.adzan_isya;
-                    is_active: true;
+                    is_active: root.next_shalat == "Isya"? true : false;
                 }
 
                 Footer { 
