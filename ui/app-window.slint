@@ -270,19 +270,14 @@ export component MessageWindow inherits Dialog {
 
     in property <string> message_text;
     callback close_window();
-
-    VerticalLayout {
-        spacing: 16px;
-        padding: 16px;
-
-        Text {
+    Text {
             text: root.message_text;
             font-size: 14px;
             color: #333333;
             horizontal-alignment: center;
             vertical-alignment: center;
-        }
     }
+    
 }
 
 
@@ -300,6 +295,13 @@ export component AppWindow inherits Window {
     height: 660px;
     in-out property <int> counter: 42;
     in-out property <bool> blink-active: true;
+    
+    in-out property <bool> is_silent_shubuh: true;
+    in-out property <bool> is_silent_dzuhur: true;
+    in-out property <bool> is_silent_ashar: true;
+    in-out property <bool> is_silent_maghrib: true;
+    in-out property <bool> is_silent_isya: true;
+
     in-out property <string> next_shalat;
     in-out property <string> location: "Not Selected";
     
@@ -311,10 +313,13 @@ export component AppWindow inherits Window {
     in-out property <string> adzan_maghrib;
     in-out property <string> adzan_isya;
 
+
+
     callback request-increase-value();
     callback show-about();
     callback show-credit();
     callback show-select-location();
+    callback on-off-audio(name: string);
 
     // main layout of the application
     VerticalLayout {
@@ -443,34 +448,52 @@ export component AppWindow inherits Window {
                 ListJadwalShalat {
                     nama_shalat: "Shubuh";
                     waktu_shalat: root.adzan_shubuh;
-                    is_silent: false;
+                    is_silent: root.is_silent_shubuh;
                     is_active: root.next_shalat == "Shubuh"? true : false;
+                    clicked => {
+                        root.on-off-audio("shubuh_audio");
+                    }
                 }
 
                 ListJadwalShalat {
                     nama_shalat: "Dzuhur";
                     waktu_shalat: root.adzan_dzuhur;
-                    is_silent: true;
+                    is_silent: root.is_silent_dzuhur;
                     is_active: root.next_shalat == "Dzuhur"? true : false;
+                    clicked => {
+                        root.on-off-audio("dzuhur_audio");
+                    }
                 }
 
                 ListJadwalShalat {
                     nama_shalat: "Ashar";
                     waktu_shalat: root.adzan_ashar;
-                    is_silent: false;
+                    is_silent: root.is_silent_ashar;
                     is_active: root.next_shalat == "Ashar"? true : false;
+                    clicked => {
+                        root.on-off-audio("ashar_audio");
+                    }
                 }
 
                 ListJadwalShalat {
                     nama_shalat: "Maghrib";
                     waktu_shalat: root.adzan_maghrib;
+                    is_silent: root.is_silent_maghrib;
                     is_active: root.next_shalat == "Maghrib"? true : false;
+                    clicked => {
+                        root.on-off-audio("maghrib_audio");
+                    }
                 }
 
                 ListJadwalShalat {
                     nama_shalat: "Isya";
                     waktu_shalat: root.adzan_isya;
+                    is_silent: root.is_silent_isya;
                     is_active: root.next_shalat == "Isya"? true : false;
+                    clicked => {
+                        root.on-off-audio("isya_audio");
+                        
+                    }
                 }
 
                 Footer { 

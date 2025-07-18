@@ -10,6 +10,8 @@ export component ListJadwalShalat {
     in-out property <bool> is_silent: true;
     in-out property <bool> is_active: false;
 
+    callback clicked();
+
     HorizontalLayout {
         spacing: 8px;
         Rectangle {
@@ -67,8 +69,10 @@ export component ListJadwalShalat {
                 }
 
                 TouchArea {
+                    mouse-cursor: pointer;
                     clicked => {
-                    } // Memanggil callback
+                        root.clicked();
+                    } 
                 }
             }
         }

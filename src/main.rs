@@ -1,9 +1,8 @@
 // Prevent console window in addition to Slint window in Windows release builds when, e.g., starting the app via file manager. Ignored on other platforms.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use std::{error::Error, io::Write, fs::File, io::Result, time::Duration, thread};
+use std::{error::Error, io::Write, fs::File, io::Result, time::Duration, thread, fs};
 use serde::Deserialize;
-
 use slint::{ModelRc, SharedString, VecModel, Timer};
 use std::rc::Rc;
 use std::io::{BufRead, BufReader};
@@ -14,15 +13,14 @@ use chrono::{Datelike, Local, Timelike, NaiveTime};
 use misykat::hijri::HijriDate;
 use misykat::jiff;
 use rodio::{OutputStreamBuilder};
-
+use rust_embed::RustEmbed;
 
 slint::include_modules!();
 
-// use std::{fs::File, io::BufReader};
-// use slint::{ModelRc, VecModel, SharedString};
+#[derive(RustEmbed)]
+#[folder = "audio/"]
+struct AudioAssets;
 
-// use std::rc::Rc;
-// use std::cell::RefCell;
 
 #[derive(Debug, Deserialize, Clone)]
 struct Lokasi {
@@ -78,6 +76,56 @@ fn save_settings_to_ini(path: &str, city_id: u32, city_name: &str, city_gmt: &st
     Ok(())
 }
 
+fn save_settings_audio_to_ini(path: &str, shalat: &str) -> std::io::Result<String> {
+    let content = fs::read_to_string(path).unwrap_or_default();
+    let mut lines = Vec::new();
+    let mut in_audio = false;
+    let mut found_key = false;
+    let mut found_audio = false;
+    let mut new_value = "on";
+    for line in content.lines() {
+        if line.trim() == "[audio]" {
+            in_audio = true;
+            found_audio = true;
+            lines.push(line.to_string());
+            continue;
+        }
+
+        if line.trim().starts_with('[') && line.trim() != "[audio]" {
+            in_audio = false;
+        }
+
+        if in_audio && line.trim_start().to_lowercase().starts_with(&format!("{} =", shalat.to_lowercase())) {
+            let current_value = line.split('=').nth(1).unwrap().trim();
+            new_value = if current_value == "on" { "off" } else { "on" };
+            lines.push(format!("{} = {}", shalat, new_value));
+            found_key = true;
+        } else {
+            lines.push(line.to_string());
+        }
+    }
+
+    if !found_audio {
+        
+        lines.push(String::new());
+        lines.push("[audio]".to_string());
+        lines.push(format!("{} = {}", shalat, new_value));
+    }
+
+    else if found_audio && !found_key {
+        if let Some(index) = lines.iter().position(|l| l.trim() == "[audio]") {
+            lines.insert(index + 1, format!("{} = {}", shalat, new_value));
+        } else {
+            lines.push(format!("{} = {}", shalat, new_value));
+        }
+    }
+
+    fs::write(path, lines.join("\n"))?;
+
+    Ok(new_value.to_string())
+}
+
+
 fn show_message(msg: &str) {
     let dialog = Rc::new(MessageWindow::new().unwrap());
     dialog.set_message_text(SharedString::from(msg));
@@ -96,7 +144,7 @@ fn read_location_settings(path: &str) -> std::io::Result<HashMap<String, String>
         let line = line.trim();
 
         if line.starts_with('[') && line.ends_with(']') {
-            in_location = &line[1..line.len()-1] == "location" || &line[1..line.len()-1] == "adzan";
+            in_location = matches!(&line[1..line.len()-1], "location" | "adzan" | "audio");
             continue;
         }
 
@@ -150,96 +198,106 @@ async fn get_waktu_adzan(
     Ok(waktu_adzan)
 }
 
-
 fn play_adzan(nama: &str) -> std::result::Result<(), Box<dyn Error>> {
-    // Pindahkan semua ke dalam thread baru
     let nama = nama.to_string();
+
     thread::spawn(move || {
-        let stream_handle = OutputStreamBuilder::open_default_stream().unwrap();
-        let mixer = stream_handle.mixer();
+        
+        if let Ok(stream_handle) = OutputStreamBuilder::open_default_stream() {
+            let mixer = stream_handle.mixer();
 
-        let file_path = if nama == "Subuh" {
-            "audio/shubuh.mp3"
-        } else {
-            "audio/adzan.mp3"
-        };
+            let filename = if nama == "Subuh" {
+                "shubuh.mp3"
+            } else {
+                "adzan.mp3"
+            };
 
-        let file = File::open(file_path).unwrap();
-        let sink = rodio::play(mixer, BufReader::new(file)).unwrap();
-        sink.set_volume(0.2);
-
-        println!("Adzan '{}' dimulai", nama);
-
-        thread::sleep(Duration::from_secs(240));
-        drop(sink); 
+            if let Some(file_data) = AudioAssets::get(filename) {
+                let cursor = std::io::Cursor::new(file_data.data);
+                if let Ok(sink) = rodio::play(mixer, cursor) {
+                    sink.set_volume(0.5);
+                    thread::sleep(Duration::from_secs(240));
+                } else {
+                    eprintln!("Gagal memutar audio '{}'", filename);
+                }
+            } else {
+                eprintln!("File audio '{}' tidak ditemukan dalam binary", filename);
+            }
+        }
     });
 
     Ok(())
 }
+
 fn main() -> std::result::Result<(), Box<dyn Error>> {
 
     let ui = AppWindow::new()?;
+   
     let weak_ui = ui.as_weak();
 
     let timer = Timer::default();
     let mut last_adzan_played = String::new();
+
     timer.start(slint::TimerMode::Repeated, std::time::Duration::from_secs(1), move || {
         if let Some(ui) = weak_ui.upgrade() {
-            let now = Local::now();
+            let now = chrono::Local::now();
             let jam = format!("{:02}:{:02}:{:02}", now.hour(), now.minute(), now.second());
-            ui.set_jam_saat_ini(SharedString::from(jam));
-            
-            let list_waktu_shalat = match read_location_settings("data/settings.ini") {
-                Ok(settings) => {
-                    vec![
-                        JadwalShalat { nama: "Subuh", waktu: settings.get("shubuh").cloned().unwrap_or_default() },
-                        JadwalShalat { nama: "Dzuhur", waktu: settings.get("dzuhur").cloned().unwrap_or_default() },
-                        JadwalShalat { nama: "Ashar", waktu: settings.get("ashar").cloned().unwrap_or_default() },
-                        JadwalShalat { nama: "Maghrib", waktu: settings.get("maghrib").cloned().unwrap_or_default() },
-                        JadwalShalat { nama: "Isya", waktu: settings.get("isya").cloned().unwrap_or_default() },
-                    ]
-                }
+            ui.set_jam_saat_ini(slint::SharedString::from(jam));
+    
+            let settings = match read_location_settings("data/settings.ini") {
+                Ok(s) => s,
                 Err(e) => {
                     eprintln!("Gagal membaca settings: {}", e);
-                    vec![
-                        JadwalShalat { nama: "Shubuh", waktu: String::new() },
-                        JadwalShalat { nama: "Dzuhur", waktu: String::new() },
-                        JadwalShalat { nama: "Ashar", waktu: String::new() },
-                        JadwalShalat { nama: "Maghrib", waktu: String::new() },
-                        JadwalShalat { nama: "Isya", waktu: String::new() },
-                    ]
+                    return;
                 }
             };
-            
-            
+    
+            let list_waktu_shalat = vec![
+                JadwalShalat { nama: "Subuh", waktu: settings.get("shubuh").cloned().unwrap_or_default() },
+                JadwalShalat { nama: "Dzuhur", waktu: settings.get("dzuhur").cloned().unwrap_or_default() },
+                JadwalShalat { nama: "Ashar", waktu: settings.get("ashar").cloned().unwrap_or_default() },
+                JadwalShalat { nama: "Maghrib", waktu: settings.get("maghrib").cloned().unwrap_or_default() },
+                JadwalShalat { nama: "Isya", waktu: settings.get("isya").cloned().unwrap_or_default() },
+            ];
+    
             let mut index_selanjutnya = 0;
             for (i, j) in list_waktu_shalat.iter().enumerate() {
-                if let Ok(waktu) = NaiveTime::parse_from_str(&j.waktu, "%H:%M") {
+                if let Ok(waktu) = chrono::NaiveTime::parse_from_str(&j.waktu, "%H:%M") {
                     if waktu > now.time() {
                         index_selanjutnya = i;
                         break;
                     }
                 }
             }
+    
             if let Some(jadwal) = list_waktu_shalat.get(index_selanjutnya) {
-                ui.set_next_shalat(SharedString::from(jadwal.nama));
+                ui.set_next_shalat(slint::SharedString::from(jadwal.nama));
             }
+    
             for j in &list_waktu_shalat {
-                if let Ok(waktu) = NaiveTime::parse_from_str(&j.waktu, "%H:%M") {
+                if let Ok(waktu) = chrono::NaiveTime::parse_from_str(&j.waktu, "%H:%M") {
                     if waktu.hour() == now.hour() && waktu.minute() == now.minute() && last_adzan_played != j.nama {
-                        if let Err(e) = play_adzan(j.nama) {
-                            eprintln!("Failed to play adzan: {}", e);
+                        
+                        let silent_key = format!("{}_audio", j.nama.to_lowercase());
+                        let is_silent = settings.get(&silent_key)
+                            .map(|v| v.trim().to_lowercase() == "off")
+                            .unwrap_or(false);
+    
+                        if is_silent {
+                            println!("Adzan {} dimatikan (silent)", j.nama);
+                        } else {
+                            if let Err(e) = play_adzan(j.nama) {
+                                eprintln!("Gagal memutar adzan: {}", e);
+                            }
                         }
+    
                         last_adzan_played = j.nama.to_string();
                     }
                 }
             }
-
-       
-          
         }
     });
-
+    
     let date_gregorian = Local::now();
     let year: i16 = date_gregorian.year() as i16;
     let month: i8 = date_gregorian.month() as i8;
@@ -260,13 +318,18 @@ fn main() -> std::result::Result<(), Box<dyn Error>> {
                 settings.get("gmt").unwrap_or(&"+0".to_string())
             );
 
-            
             ui.set_location(SharedString::from(prayer_location));
             ui.set_adzan_ashar(SharedString::from(settings.get("ashar").unwrap_or(&"".to_string())));
             ui.set_adzan_dzuhur(SharedString::from(settings.get("dzuhur").unwrap_or(&"".to_string())));
             ui.set_adzan_isya(SharedString::from(settings.get("isya").unwrap_or(&"".to_string())));
             ui.set_adzan_maghrib(SharedString::from(settings.get("maghrib").unwrap_or(&"".to_string())));
             ui.set_adzan_shubuh(SharedString::from(settings.get("shubuh").unwrap_or(&"".to_string())));
+
+            ui.set_is_silent_shubuh(settings.get("shubuh_audio").map(|v| v != "on").unwrap_or(true));
+            ui.set_is_silent_dzuhur(settings.get("dzuhur_audio").map(|v| v != "on").unwrap_or(true));
+            ui.set_is_silent_ashar(settings.get("ashar_audio").map(|v| v != "on").unwrap_or(true));
+            ui.set_is_silent_maghrib(settings.get("maghrib_audio").map(|v| v != "on").unwrap_or(true));
+            ui.set_is_silent_isya(settings.get("isya_audio").map(|v| v != "on").unwrap_or(true));
         }
         Err(e) => {
             eprintln!("Gagal membaca settings: {}", e);
@@ -349,6 +412,39 @@ fn main() -> std::result::Result<(), Box<dyn Error>> {
         dialog.show().unwrap();  
     }
     });
+
+    let ui_weak = ui.as_weak(); // Ambil weak reference sebelum masuk ke closure
+
+    ui.on_on_off_audio({
+        move |shalat| {
+            let result = save_settings_audio_to_ini("data/settings.ini", &shalat);
+           
+            if let Ok(status) = result {
+                if let Some(ui) = ui_weak.upgrade() {
+                    match shalat.as_str() {
+                        "shubuh_audio" => ui.set_is_silent_shubuh(status == "off"),
+                        "dzuhur_audio" => ui.set_is_silent_dzuhur(status == "off"),
+                        "ashar_audio" => ui.set_is_silent_ashar(status == "off"),
+                        "maghrib_audio" => ui.set_is_silent_maghrib(status == "off"),
+                        "isya_audio" => ui.set_is_silent_isya(status == "off"),
+                        _ => {}
+                    }
+                }
+
+                let pesan = format!(
+                    "Audio adzan {} berhasil diubah menjadi {}",
+                    shalat,
+                    if status == "on" { "off" } else { "on" }
+                );
+                show_message(&pesan);
+            } else {
+                show_message("Gagal menyimpan perubahan audio.");
+            }
+        }
+    });
+
+  
+    
     ui.run()?;
     Ok(())
 }
