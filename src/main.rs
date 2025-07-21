@@ -9,7 +9,7 @@ use std::io::{BufRead, BufReader};
 use std::collections::HashMap;
 use tokio::runtime::Runtime;
 use reqwest;
-use chrono::{Datelike, Local, Timelike, NaiveTime};
+use chrono::{Datelike, Local, Timelike};
 use misykat::hijri::HijriDate;
 use misykat::jiff;
 use rodio::{OutputStreamBuilder};
